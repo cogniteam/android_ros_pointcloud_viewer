@@ -14,20 +14,20 @@
  * the License.
  */
 
-include "android_10"
-include "android_15"
-include "android_acm_serial"
-include "android_benchmarks"
-include "android_tutorial_camera"
-include "android_tutorial_image_transport"
-include "android_tutorial_map_viewer"
-include "android_tutorial_pubsub"
-include "android_tutorial_teleop"
-include "android_navex"
-include "docs"
+dependencies {
+  compile project(':android_15')
+}
 
-// TODO(damonkohler): The following projects are not included in the
-// multi-project yet till its sorted whereabouts they should actually live
-// (should they be in a java repo instead?)
-// include "compressed_map_transport"
-// include "polling_input_stream"
+apply plugin: 'com.android.application'
+
+android {
+  compileSdkVersion 15
+
+  defaultConfig {
+    minSdkVersion 15
+    applicationId "org.cogniteam.org.cogniteam.navex.android_navex"
+    targetSdkVersion 15
+    versionCode 1
+    versionName "1.0"
+  }
+}
