@@ -92,14 +92,12 @@ public class MainActivity extends RosActivity {
         mapVisualizationView.onCreate(Lists.<Layer>newArrayList(new CameraControlLayer(),
                 new OccupancyGridLayer("/map"),
                 new LaserScanLayer("/scan"),
-//                new PoseSubscriberLayer("/slam_out_pose"),
                 new RobotLayer("/slam_out_pose")));
 
         pcdVisualizationView = (VisualizationView) findViewById(R.id.pcd_visualization);
         pcdVisualizationView.getCamera().setFrame("map");
         pcdVisualizationView.onCreate(Lists.<Layer>newArrayList(
-                new CameraControlLayer(),
-                new CogniPointCloud2DLayer("/cloud")));
+                new CogniPointCloud2DLayer("/cloud" , "map")));
     }
 
     @Override

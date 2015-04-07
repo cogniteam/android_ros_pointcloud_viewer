@@ -59,6 +59,34 @@ public class Vertices {
     vertices.reset();
   }
 
+	/**
+	 * TEST: draw points with different colors for each.
+	 * The FloatBuffer of colors should be made of (r,g,b,a).
+	 */
+	public static void drawPointsWithColors(GL10 gl, FloatBuffer vertices, FloatBuffer colors, float pointSize) {
+		vertices.mark();
+		colors.mark();
+
+		//set depth buffering
+		gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);
+		gl.glEnable(gl.GL_DEPTH_TEST);
+		gl.glDepthFunc( gl.GL_LEQUAL );
+		gl.glDepthMask( true );
+
+		gl.glPointSize(pointSize);
+		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
+		gl.glVertexPointer(3, GL10.GL_FLOAT, 0, vertices);
+		gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
+		gl.glColorPointer(4, GL10.GL_FLOAT, 0, colors);
+		gl.glDrawArrays(GL10.GL_POINTS, 0, countVertices(vertices, 3));
+
+		gl.glDisableClientState(GL10.GL_VERTEX_ARRAY);
+		gl.glDisableClientState(GL10.GL_COLOR_ARRAY);
+
+		vertices.reset();
+		colors.reset();
+	}
+
   public static void drawTriangleFan(GL10 gl, FloatBuffer vertices, Color color) {
     vertices.mark();
     color.apply(gl);

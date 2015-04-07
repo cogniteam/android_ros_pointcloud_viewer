@@ -78,7 +78,7 @@ public class VisualizationView extends GLSurfaceView implements NodeMain {
       // Turn on OpenGL logging.
       setDebugFlags(getDebugFlags() | DEBUG_LOG_GL_CALLS);
     }
-    setEGLConfigChooser(8, 8, 8, 8, 0, 0);
+    setEGLConfigChooser(8, 8, 8, 8, 16, 0);
     getHolder().setFormat(PixelFormat.TRANSLUCENT);
     renderer = new XYOrthographicRenderer(this);
     setRenderer(renderer);
