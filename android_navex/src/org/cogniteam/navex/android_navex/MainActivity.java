@@ -97,7 +97,7 @@ public class MainActivity extends RosActivity {
         pcdVisualizationView = (VisualizationView) findViewById(R.id.pcd_visualization);
         pcdVisualizationView.getCamera().setFrame("map");
         pcdVisualizationView.onCreate(Lists.<Layer>newArrayList(
-                new CogniPointCloud2DLayer("/cloud" , "map")));
+                new CogniPointCloud2DLayer(MainActivity.this, "/cloud" , "map")));
     }
 
     @Override
