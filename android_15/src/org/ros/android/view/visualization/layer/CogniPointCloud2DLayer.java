@@ -76,7 +76,7 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		}
 
 		public void move(Vector3 v) {
-			Matrix.translateM(this.mModel, 0, (float)v.getX(),(float) v.getY(), (float)v.getZ());
+			Matrix.translateM(this.mModel, 0, (float) v.getX(), (float) v.getY(), (float) v.getZ());
 		}
 
 		//angle in degrees
@@ -92,6 +92,30 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		//angle in degrees
 		public void rotateZ(float angle) {
 			Matrix.rotateM(this.mModel, 0, angle, 0, 0, 1.0f);
+		}
+
+		//Rotate the object around self's position. Angle in degrees
+		public void rotateXAroundSelfPosition(float angle) {
+			Vector3 position = getPosition();
+			move(position.scale(-1));
+			rotateX(angle);
+			move(position);
+		}
+
+		//Rotate the object around self's position. Angle in degrees
+		public void rotateYAroundSelfPosition(float angle) {
+			Vector3 position = getPosition();
+			move(position.scale(-1));
+			rotateY(angle);
+			move(position);
+		}
+
+		//Rotate the object around self's position. Angle in degrees
+		public void rotateZAroundSelfPosition(float angle) {
+			Vector3 position = getPosition();
+			move(position.scale(-1));
+			rotateZ(angle);
+			move(position);
 		}
 
 		//Scales the object
@@ -222,7 +246,7 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 		pcdModel = new ModelMatrix();
 		cameraModel = new ModelMatrix();
-
+		cameraModel.move(0, 0, -1);
 
 		//set factors according to screen density, to keep behaviours on different devices.
 		final DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -248,28 +272,29 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		if (null != vertexFrontBuffer) {
 			//draw the pcd
 			synchronized (mutex) {
-
-
-
-
-
-				//TODO: check gluLookAt
-				GLU.gluLookAt(gl, cameraModel.getX(), cameraModel.getY(), cameraModel.getZ(), /* look from camera XYZ */
-						0, 0, -1, /* look at the origin */
-						(float)cameraModel.getAxisXNormalized().getY(), (float)cameraModel.getAxisYNormalized().getY(), (float)cameraModel.getAxisZNormalized().getY()); /* positive Y up vector */
-				gl.glRotatef(1f, 0.f, 1.f, 0.f);/* orbit the Y axis */
-
-
-
-
-
-
-
+				setCamera(gl);
 
 //				gl.glLoadMatrixf(pcdModel.getMat(), 0);
 				Vertices.drawPointsWithColors(gl, vertexFrontBuffer, colorsFrontBuffer, POINT_SIZE);
 			}
 		}
+	}
+
+	/**
+	 * Sets the camera: moves according to the camera position, and set the lookAt point according to it's Z axis.
+	 */
+	private void setCamera(GL10 gl) {
+		gl.glMatrixMode(GL10.GL_MODELVIEW);     //Select The Modelview Matrix
+		gl.glLoadIdentity();
+		Vector3 lookAtPoint = cameraModel.getAxisZNormalized();/*Z axis of the "lookAt" is the place we should look*/
+		//add the movement of the camera, to get relative point and not absolute.
+		lookAtPoint = lookAtPoint.add(cameraModel.getPosition());
+		GLU.gluLookAt(gl, cameraModel.getX(), cameraModel.getY(), cameraModel.getZ(), /* look from camera XYZ */
+				(float)lookAtPoint.getX(), (float)lookAtPoint.getY(), (float)lookAtPoint.getZ(),
+				(float) cameraModel.getAxisXNormalized().getY(), (float) cameraModel.getAxisYNormalized().getY(), (float) cameraModel.getAxisZNormalized().getY()); /* positive Y up vector */
+//		Log.i("SPAM" ,"SPAM: lookAtPoint x = " + lookAtPoint.getX() + " lookAtPoint y = " + lookAtPoint.getY() + " lookAtPoint z = " + lookAtPoint.getZ());
+//		Log.i("SPAM" ,"SPAM: cameraModel x = " + cameraModel.getX() + " cameraModel y = " + cameraModel.getY() + " cameraModel z = " + cameraModel.getZ());
+
 	}
 
 	@Override
@@ -407,15 +432,28 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		float movement = -(scaleMovementFactor * (1 - factor));
 		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: movement:! " + movement);
 
-		//Move "inside", on z axis of the user.
+		/*//Move "inside", on z axis of the user.
 		float moveX = (float) pcdModel.getAxisXNormalized().getZ() * movement;
 		float moveY = (float) pcdModel.getAxisYNormalized().getZ() * movement;
 		float moveZ = (float) pcdModel.getAxisZNormalized().getZ() * movement;
+
+
 
 		pcdModel.move(moveX, moveY, moveZ);
 
 		pcdModel.move(positionBefore);
 		positionBefore = null;
+*/
+
+		//Move "inside", on z axis of the user.
+		/*float moveX = (float) cameraModel.getAxisXNormalized().getZ() * movement;
+		float moveY = (float) cameraModel.getAxisYNormalized().getZ() * movement;
+		float moveZ = (float) cameraModel.getAxisZNormalized().getZ() * movement;
+
+
+		cameraModel.move(moveX, moveY, moveZ);*/
+
+		cameraModel.move(0,0,movement);
 	}
 
 	private void onMultiGestureTranslate(float x, float y) {
@@ -426,10 +464,10 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: translate detected! : " + x + ", " + y);
 		x *= translateGestureFactor;
 		y *= translateGestureFactor;
-
+/*
 		//invert, for scrolling effect.
 		x *= -1;
-		y *= -1;
+		y *= -1;*/
 
 
 		//first rotate back the pcd, move, and then rotate it back.
@@ -438,7 +476,7 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 		//rotate on each of the model axes, relative to the user's XY surface.
 		//switch between x and y axes. also, y axis is reversed.
-		y *= -1;
+//		y *= -1;
 		pcdModel.rotateX((float) pcdModel.getAxisXNormalized().getX() * y);
 		pcdModel.rotateY((float) pcdModel.getAxisYNormalized().getX() * y);
 		pcdModel.rotateZ((float) pcdModel.getAxisZNormalized().getX() * y);
@@ -450,6 +488,18 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 		pcdModel.move(positionBefore);
 		positionBefore = null;
+
+
+
+
+//		cameraModel.rotateX(y);
+//		cameraModel.rotateY(x);
+
+
+		cameraModel.rotateXAroundSelfPosition(y);
+		cameraModel.rotateYAroundSelfPosition(x);
+
+
 	}
 
 
@@ -461,6 +511,15 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		pcdModel.rotateX((float) pcdModel.getAxisXNormalized().getZ() * deltaAngle);
 		pcdModel.rotateY((float) pcdModel.getAxisYNormalized().getZ() * deltaAngle);
 		pcdModel.rotateZ((float) pcdModel.getAxisZNormalized().getZ() * deltaAngle);
+
+
+
+//		cameraModel.rotateX((float) cameraModel.getAxisXNormalized().getZ() * deltaAngle);
+//		cameraModel.rotateY((float) cameraModel.getAxisYNormalized().getZ() * deltaAngle);
+//		cameraModel.rotateZ((float) cameraModel.getAxisZNormalized().getZ() * deltaAngle);
+
+//		cameraModel.rotateZ(deltaAngle);
+		cameraModel.rotateZAroundSelfPosition(-deltaAngle);
 	}
 
 	private void updateVertexBuffer(final PointCloud2 pointCloud) {
