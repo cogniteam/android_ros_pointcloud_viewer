@@ -26,18 +26,15 @@ import com.google.common.collect.Lists;
 import org.ros.address.InetAddressFactory;
 import org.ros.android.RosActivity;
 import org.ros.android.android_tutorial_teleop.R;
-import org.ros.android.view.visualization.Viewport;
+import org.ros.android.view.visualization.PointCloudView;
 import org.ros.android.view.visualization.VisualizationView;
 import org.ros.android.view.visualization.layer.CameraControlLayer;
-import org.ros.android.view.visualization.layer.CameraControlListener;
 import org.ros.android.view.visualization.layer.CogniPointCloud2DLayer;
 import org.ros.android.view.visualization.layer.LaserScanLayer;
 import org.ros.android.view.visualization.layer.Layer;
 import org.ros.android.view.visualization.layer.OccupancyGridLayer;
-import org.ros.android.view.visualization.layer.PathLayer;
-import org.ros.android.view.visualization.layer.PosePublisherLayer;
-import org.ros.android.view.visualization.layer.PoseSubscriberLayer;
 import org.ros.android.view.visualization.layer.RobotLayer;
+import org.ros.namespace.GraphName;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
 
@@ -51,7 +48,7 @@ import org.ros.node.NodeMainExecutor;
 public class MainActivity extends RosActivity {
 
     private VisualizationView mapVisualizationView;
-    private VisualizationView pcdVisualizationView;
+    private PointCloudView pcdVisualizationView;
 
     public MainActivity() {
         super("Navex Viewer", "Navex Viewer");
@@ -94,10 +91,8 @@ public class MainActivity extends RosActivity {
                 new LaserScanLayer("/scan"),
                 new RobotLayer("/slam_out_pose")));
 
-        pcdVisualizationView = (VisualizationView) findViewById(R.id.pcd_visualization);
-        pcdVisualizationView.getCamera().setFrame("map");
-        pcdVisualizationView.onCreate(Lists.<Layer>newArrayList(
-                new CogniPointCloud2DLayer(MainActivity.this, "/cloud" , "map")));
+        pcdVisualizationView = (PointCloudView) findViewById(R.id.pcd_visualization);
+		pcdVisualizationView.onCreate(MainActivity.this, "/cloud", "map");
     }
 
     @Override
@@ -110,6 +105,6 @@ public class MainActivity extends RosActivity {
                         getMasterUri());
 
         nodeMainExecutor.execute(mapVisualizationView, nodeConfiguration.setNodeName("android/map_view"));
-        nodeMainExecutor.execute(pcdVisualizationView, nodeConfiguration.setNodeName("android/pcd_view"));
+        nodeMainExecutor.execute(pcdVisualizationView.getNodeMain(), nodeConfiguration.setNodeName("android/pcd_view"));
     }
 }

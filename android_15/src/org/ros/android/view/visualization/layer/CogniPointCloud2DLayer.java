@@ -18,10 +18,8 @@ package org.ros.android.view.visualization.layer;
 
 import android.content.Context;
 import android.opengl.GLU;
-import android.opengl.Matrix;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -33,6 +31,7 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.ros.android.view.visualization.RotateGestureDetector;
 import org.ros.android.view.visualization.Vertices;
 import org.ros.android.view.visualization.VisualizationView;
+import org.ros.android.view.visualization.gl_utils.ModelMatrix;
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
@@ -53,165 +52,17 @@ import sensor_msgs.PointField;
  * @author damonkohler@google.com (Damon Kohler)
  */
 public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> implements TfLayer {
-	/**
-	 * A class used for holding model data for opengl 3D objects.
-	 */
-	public class ModelMatrix {
-		private float mModel[] = new float[16];
-
-		public ModelMatrix() {
-			Matrix.setIdentityM(mModel, 0);
-		}
-
-		public ModelMatrix clone(){
-			ModelMatrix answer = new ModelMatrix();
-			for(int i=0; i<mModel.length; i++){
-				answer.mModel[i] = this.mModel[i];
-			}
-			return answer;
-		}
-
-		public void translate(float dx, float dy, float dz) {
-			Matrix.translateM(this.mModel, 0, dx, dy, dz);
-		}
-
-		public void translate(Vector3 v) {
-			Matrix.translateM(this.mModel, 0, (float) v.getX(), (float) v.getY(), (float) v.getZ());
-		}
-
-		//angle in degrees
-		public void rotateX(float angle) {
-			Matrix.rotateM(this.mModel, 0, angle, 1.0f, 0, 0);
-		}
-
-		//angle in degrees
-		public void rotateY(float angle) {
-			Matrix.rotateM(this.mModel, 0, angle, 0, 1.0f, 0);
-		}
-
-		//angle in degrees
-		public void rotateZ(float angle) {
-			Matrix.rotateM(this.mModel, 0, angle, 0, 0, 1.0f);
-		}
-
-		//Rotate the object around self's position. Angle in degrees
-		public void rotateXAroundSelfPosition(float angle) {
-			Vector3 position = getPosition();
-			translate(position.scale(-1));
-			rotateX(angle);
-			translate(position);
-		}
-
-		//Rotate the object around self's position. Angle in degrees
-		public void rotateYAroundSelfPosition(float angle) {
-			Vector3 position = getPosition();
-			translate(position.scale(-1));
-			rotateY(angle);
-			translate(position);
-		}
-
-		//Rotate the object around self's position. Angle in degrees
-		public void rotateZAroundSelfPosition(float angle) {
-			Vector3 position = getPosition();
-			translate(position.scale(-1));
-			rotateZ(angle);
-			translate(position);
-		}
-
-		//Scales the object
-		public void scale(float amount) {
-			Matrix.scaleM(this.mModel, 0, amount, amount, amount);
-		}
-
-		/**
-		 * @return The X position of this model.
-		 */
-		public float getX() {
-			return mModel[12];
-		}
-
-		/**
-		 * @return The Y position of this model.
-		 */
-		public float getY() {
-			return mModel[13];
-		}
-
-		/**
-		 * @return The Z position of this model.
-		 */
-		public float getZ() {
-			return mModel[14];
-		}
-
-		/**
-		 * @return The position of this model.
-		 */
-		public Vector3 getPosition() {
-			return new Vector3(getX(), getY(), getZ());
-		}
-
-		/**
-		 * @return A 3D point representing the X axis of this model.
-		 */
-		public Vector3 getAxisX() {
-			return new Vector3(mModel[0], mModel[1], mModel[2]);
-		}
-
-		/**
-		 * @return A 3D point representing the Y axis of this model.
-		 */
-		public Vector3 getAxisY() {
-			return new Vector3(mModel[4], mModel[5], mModel[6]);
-		}
-
-		/**
-		 * @return A 3D point representing the Z axis of this model.
-		 */
-		public Vector3 getAxisZ() {
-			return new Vector3(mModel[8], mModel[9], mModel[10]);
-		}
-
-		/**
-		 * @return A 3D point representing the X axis of this model.
-		 * The axis is normalized.
-		 */
-		public Vector3 getAxisXNormalized() {
-			return (new Vector3(mModel[0], mModel[1], mModel[2])).scale(1.f / getScaling());
-		}
-
-		/**
-		 * @return A 3D point representing the Y axis of this model.
-		 * The axis is normalized.
-		 */
-		public Vector3 getAxisYNormalized() {
-			return (new Vector3(mModel[4], mModel[5], mModel[6])).scale(1.f / getScaling());
-		}
-
-		/**
-		 * @return A 3D point representing the Z axis of this model.
-		 * The axis is normalized.
-		 */
-		public Vector3 getAxisZNormalized() {
-			return (new Vector3(mModel[8], mModel[9], mModel[10])).scale(1.f / getScaling());
-		}
-
-		public float getScaling() {
-			return (float) Math.sqrt(Math.pow(mModel[0], 2) + Math.pow(mModel[4], 2) + Math.pow(mModel[8], 2));
-		}
-
-		public final float[] getMat() {
-			return mModel;
-		}
-	}
+	private GraphName frame;
 
 	private static final int BACKGRUND_COLOR = 0x377dfaFF;
 	private static final float POINT_SIZE = 10.f;
 
+	private final static float MAX_INTENSITY = 3700f;
+	private final static float MIN_INTENSITY = 0f;
+
+	//keep a mutex for reading/writing to buffers.
 	private final Object mutex;
 
-	private GraphName frame;
-	//use frameToStick for drawing the pcd without moving it on robot's movement.
 	private GraphName frameToStick;
 	private FloatBuffer vertexFrontBuffer;
 	private FloatBuffer colorsFrontBuffer;
@@ -231,10 +82,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 	private float translateMultiGestureFactor = 0.002f; //translation between translate gesture to rotating
 	private final float scaleMovementFactor = 1f; //translation between scaling to movement in z axis
 
-
-	private final static float MAX_INTENSITY = 3700f;
-	private final static float MIN_INTENSITY = 0f;
-
 	public CogniPointCloud2DLayer(Context context, String topicName, String frameToStick) {
 		this(context, GraphName.of(topicName), GraphName.of(frameToStick));
 	}
@@ -253,7 +100,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		windowManager.getDefaultDisplay().getMetrics(displayMetrics);
 		float density = displayMetrics.density;
 		translateGestureFactor *= (density / 3f);
-
 	}
 
 	@Override
@@ -315,7 +161,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		subscriber.addMessageListener(new MessageListener<PointCloud2>() {
 			@Override
 			public void onNewMessage(PointCloud2 pointCloud) {
-				Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: got new PCD!");
 				//Keep the PCD's frame for any case.
 				frame = GraphName.of(pointCloud.getHeader().getFrameId());
 				updateVertexBuffer(pointCloud);
@@ -403,30 +248,23 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 	private void onGestureDoubleTap(float x, float y) {
 		//TODO: ADD
-		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: double tap detected! : " + x + ", " + y);
 	}
 
 	private void onGestureZoom(float focusX, float focusY, float factor) {
-		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: zoom detected! " + focusX + " , " + focusY + " , " + factor);
-
 		//Move on z axis of the camera.
 		float movement = -(scaleMovementFactor * (1 - factor));
 		cameraModel.translate(0, 0, movement);
 	}
 
 	private void onMultiGestureTranslate(float x, float y) {
-		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: Multi translate detected! : " + x + ", " + y);
 		x *= translateMultiGestureFactor;
 		y *= - translateMultiGestureFactor;
-
 		cameraModel.translate(x,y,0);
 	}
 
 	private void onGestureTranslate(float x, float y) {
-		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: translate detected! : " + x + ", " + y);
 		x *= translateGestureFactor;
 		y *= translateGestureFactor;
-
 		cameraModel.rotateX(y);
 		cameraModel.rotateY(x);
 	}
@@ -434,8 +272,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 	private void onGestureRotate(float focusX, float focusY, float deltaAngle) {
 		deltaAngle = (float) Math.toDegrees(deltaAngle);
-		Log.i("SPAM", "SPAM: CogniPointCloud2DLayer: rotation detected! " + focusX + " , " + focusY + " , " + deltaAngle);
-
 		cameraModel.rotateZ(deltaAngle);
 	}
 

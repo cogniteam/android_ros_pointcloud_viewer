@@ -17,7 +17,7 @@
         android:background="@android:color/darker_gray"/>
 
 
-    <org.ros.android.view.visualization.VisualizationView
+    <org.ros.android.view.visualization.PointCloudView
         android:id="@+id/pcd_visualization"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
