@@ -20,6 +20,7 @@ import android.content.Context;
 import android.opengl.GLU;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -301,6 +302,8 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			vertexBackBuffer.put(buffer.readFloat()); //y
 			vertexBackBuffer.put(buffer.readFloat()); //z
 
+			//discard index
+			buffer.readFloat();
 
 			// intensities
 			float intensity = buffer.readFloat();
@@ -311,7 +314,9 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			colorsBackBuffer.put(intensity); //b
 			colorsBackBuffer.put(1f); //a
 
-			//discard index
+			//discard leftovers
+			buffer.readFloat();
+			buffer.readFloat();
 			buffer.readFloat();
 		}
 		vertexBackBuffer.position(0);

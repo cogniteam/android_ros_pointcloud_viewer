@@ -24,6 +24,7 @@ include "android_tutorial_map_viewer"
 include "android_tutorial_pubsub"
 include "android_tutorial_teleop"
 include "android_navex"
+include "android_pointcloud_viewer"
 include "docs"
 
 // TODO(damonkohler): The following projects are not included in the

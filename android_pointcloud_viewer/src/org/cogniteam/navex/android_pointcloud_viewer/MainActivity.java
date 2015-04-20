@@ -14,26 +14,24 @@
  * the License.
  */
 
-package org.cogniteam.navex.android_navex;
+package org.cogniteam.navex.android_pointcloud_viewer;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Toast;
 
-import com.google.common.collect.Lists;
-
+import org.apache.commons.net.io.ToNetASCIIInputStream;
 import org.ros.address.InetAddressFactory;
 import org.ros.android.RosActivity;
 import org.ros.android.view.visualization.PointCloudView;
-import org.ros.android.view.visualization.VisualizationView;
-import org.ros.android.view.visualization.layer.CameraControlLayer;
-import org.ros.android.view.visualization.layer.LaserScanLayer;
-import org.ros.android.view.visualization.layer.Layer;
-import org.ros.android.view.visualization.layer.OccupancyGridLayer;
-import org.ros.android.view.visualization.layer.RobotLayer;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * An app that can be used to control a remote robot. This app also demonstrates
@@ -44,11 +42,10 @@ import org.ros.node.NodeMainExecutor;
  */
 public class MainActivity extends RosActivity {
 
-    private VisualizationView mapVisualizationView;
     private PointCloudView pcdVisualizationView;
 
     public MainActivity() {
-        super("Navex Viewer", "Navex Viewer");
+        super("Point Cloud Viewer", "Point Cloud Viewer");
     }
 
     @Override
@@ -81,27 +78,19 @@ public class MainActivity extends RosActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        mapVisualizationView = (VisualizationView) findViewById(R.id.map_visualization);
-        mapVisualizationView.getCamera().jumpToFrame("map");
-        mapVisualizationView.onCreate(Lists.<Layer>newArrayList(new CameraControlLayer(),
-                new OccupancyGridLayer("/map"),
-                new LaserScanLayer("/scan"),
-                new RobotLayer("/slam_out_pose")));
-
         pcdVisualizationView = (PointCloudView) findViewById(R.id.pcd_visualization);
+		pcdVisualizationView.setControlMode(PointCloudView.BUTTONS_CONTROL);
 		pcdVisualizationView.onCreate(MainActivity.this, "/cloud/source", "map");
     }
 
     @Override
     protected void init(NodeMainExecutor nodeMainExecutor) {
-        mapVisualizationView.init(nodeMainExecutor);
         pcdVisualizationView.init(nodeMainExecutor);
 
         NodeConfiguration nodeConfiguration =
                 NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress(),
                         getMasterUri());
 
-        nodeMainExecutor.execute(mapVisualizationView, nodeConfiguration.setNodeName("android/map_view"));
         nodeMainExecutor.execute(pcdVisualizationView.getNodeMain(), nodeConfiguration.setNodeName("android/pcd_view"));
     }
 }
