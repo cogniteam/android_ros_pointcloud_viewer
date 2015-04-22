@@ -17,21 +17,15 @@
 package org.cogniteam.navex.android_pointcloud_viewer;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.Toast;
 
-import org.apache.commons.net.io.ToNetASCIIInputStream;
 import org.ros.address.InetAddressFactory;
 import org.ros.android.RosActivity;
 import org.ros.android.view.visualization.PointCloudView;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * An app that can be used to control a remote robot. This app also demonstrates
@@ -79,7 +73,7 @@ public class MainActivity extends RosActivity {
         setContentView(R.layout.main);
 
         pcdVisualizationView = (PointCloudView) findViewById(R.id.pcd_visualization);
-		pcdVisualizationView.setControlMode(PointCloudView.BUTTONS_CONTROL);
+		pcdVisualizationView.setControlMode(PointCloudView.BUTTONS_AND_GESTURES);
 		pcdVisualizationView.onCreate(MainActivity.this, "/cloud/source", "map");
     }
 

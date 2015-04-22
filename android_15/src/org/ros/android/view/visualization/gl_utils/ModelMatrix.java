@@ -12,6 +12,9 @@ public class ModelMatrix {
 	public ModelMatrix() {
 		Matrix.setIdentityM(mModel, 0);
 	}
+	public ModelMatrix(float m[]) {
+		mModel = m;
+	}
 
 	public ModelMatrix clone(){
 		ModelMatrix answer = new ModelMatrix();
@@ -19,6 +22,12 @@ public class ModelMatrix {
 			answer.mModel[i] = this.mModel[i];
 		}
 		return answer;
+	}
+
+	public ModelMatrix calTranslation(){
+		ModelMatrix m = new ModelMatrix();
+		m.translate(getX(), getY(), getZ());
+		return m;
 	}
 
 	public void translate(float dx, float dy, float dz) {
@@ -44,28 +53,9 @@ public class ModelMatrix {
 		Matrix.rotateM(this.mModel, 0, angle, 0, 0, 1.0f);
 	}
 
-	//Rotate the object around self's position. Angle in degrees
-	public void rotateXAroundSelfPosition(float angle) {
-		Vector3 position = getPosition();
-		translate(position.scale(-1));
-		rotateX(angle);
-		translate(position);
-	}
-
-	//Rotate the object around self's position. Angle in degrees
-	public void rotateYAroundSelfPosition(float angle) {
-		Vector3 position = getPosition();
-		translate(position.scale(-1));
-		rotateY(angle);
-		translate(position);
-	}
-
-	//Rotate the object around self's position. Angle in degrees
-	public void rotateZAroundSelfPosition(float angle) {
-		Vector3 position = getPosition();
-		translate(position.scale(-1));
-		rotateZ(angle);
-		translate(position);
+	//angle in degrees
+	public void rotate(float angle, float x, float y, float z) {
+		Matrix.rotateM(this.mModel, 0, angle, x, y, z);
 	}
 
 	//Scales the object
@@ -146,6 +136,26 @@ public class ModelMatrix {
 		return (new Vector3(mModel[8], mModel[9], mModel[10])).scale(1.f / getScaling());
 	}
 
+	/**
+	 * Rotates around another's model axis.
+	 * @param delta: Angle in degrees
+	 * @param model: The model to rotate around.
+	 */
+	public void rotateOnModelX(float delta, ModelMatrix camera) {
+		ModelMatrix translation = new ModelMatrix();
+		translation.translate(this.getPosition());
+		ModelMatrix invertedTranslation = translation.getInvertedMat();
+
+		ModelMatrix appliedRotation = new ModelMatrix();
+		appliedRotation.rotateX(delta);
+
+		float answer[] = new float[16];
+		Matrix.multiplyMM(answer, 0 , invertedTranslation.getMat(), 0 , this.mModel, 0);
+		Matrix.multiplyMM(answer, 0 , appliedRotation.getMat(), 0 , answer, 0);
+		Matrix.multiplyMM(answer, 0 , translation.getMat(), 0 , answer, 0);
+
+		this.mModel = answer;
+	}
 	public float getScaling() {
 		return (float) Math.sqrt(Math.pow(mModel[0], 2) + Math.pow(mModel[4], 2) + Math.pow(mModel[8], 2));
 	}
@@ -153,4 +163,25 @@ public class ModelMatrix {
 	public final float[] getMat() {
 		return mModel;
 	}
+
+	public ModelMatrix getInvertedMat(){
+		ModelMatrix answer = new ModelMatrix();
+		Matrix.invertM(answer.mModel, 0 , this.mModel, 0);
+		return answer;
+	}
+
+	/**
+	 * Sets this model to the identity matrix ("resets" the model).
+	 */
+	public void setIdentity() {
+		Matrix.setIdentityM(mModel, 0);
+	}
+
+
+	public ModelMatrix mult(ModelMatrix m){
+		float a[] = new float[16];
+		Matrix.multiplyMM(a, 0, mModel,0, m.mModel,0);
+		return new ModelMatrix(a);
+	}
+
 }

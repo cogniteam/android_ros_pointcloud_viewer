@@ -22,7 +22,7 @@ public class Slider extends RelativeLayout {
 
 
 	ImageView sliderThumb;
-	ImageView sliderBoarder;
+	View sliderBoarder;
 
 	ArrayList<SliderListener> listeners;
 
@@ -87,7 +87,7 @@ public class Slider extends RelativeLayout {
 		listeners = new ArrayList<SliderListener>();
 
 		sliderThumb = (ImageView) findViewById(R.id.slider_thumb);
-		sliderBoarder = (ImageView) findViewById(R.id.slider_boarder);
+		sliderBoarder = (View) findViewById(R.id.slider_boarder);
 
 		//set the boarder to match the size of the thumb
 		sliderThumb.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {

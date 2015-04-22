@@ -2,7 +2,6 @@ package org.ros.android.view.visualization;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,13 +18,13 @@ import java.util.ArrayList;
  * A simple joystick with visualization.
  */
 public class SimpleJoystick extends RelativeLayout {
-	ImageView boarder;
-	ImageView thumb;
+	private ImageView boarder;
+	private ImageView thumb;
 
-	int boarderCenterX;
-	int boarderCenterY;
+	private int boarderCenterX;
+	private int boarderCenterY;
 
-	ArrayList<SimpleJoystickListener> listeners;
+	private ArrayList<SimpleJoystickListener> listeners;
 
 	public interface SimpleJoystickListener {
 		/**
@@ -60,7 +59,7 @@ public class SimpleJoystick extends RelativeLayout {
 	}
 
 	private void notifyListeners(float outputX, float outputY) {
-		for(SimpleJoystickListener l : listeners){
+		for (SimpleJoystickListener l : listeners) {
 			l.onNewPosition(outputX, outputY);
 		}
 	}
@@ -143,6 +142,8 @@ public class SimpleJoystick extends RelativeLayout {
 						float outputX = xFactor * (distanceRadius / maxRadius);
 						float outputY = yFactor * (distanceRadius / maxRadius);
 
+						//invert y value (up here is less, but we want it to be greater)
+						outputY *= -1;
 						notifyListeners(outputX, outputY);
 
 						break;
