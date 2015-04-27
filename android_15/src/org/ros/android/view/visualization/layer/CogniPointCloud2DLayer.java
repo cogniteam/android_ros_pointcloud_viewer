@@ -77,26 +77,31 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 	private Vector3 pointCloudCenterOfGravity; //For rotation around the object.
 
-	private ModelMatrix cameraModel;
-	private ModelMatrix pcdModel;
+	//Models - used to hold easy-to-access data about the different objects
+	private ModelMatrix eyeMatrix; //according to LookAt
+	private ModelMatrix cameraMatrix;
+	private ModelMatrix pcdMatrix;
+
 	private PointCloudController pcdController;
 	private GesturesController gesturesController;
 
-	private static final float MAX_SPEED_PER_FRAME = 0.05f;
+	private static final float MAX_SPEED_PER_FRAME = 0.07f;
 
 	private ArrayList<PcdDrawListener> drawListeners;
+
 	private interface PcdDrawListener {
 		public void onPcdDraw();
 	}
+
 	/**
 	 * A class used to control movements according to touch events.
 	 */
 	public class GesturesController {
-		private final static float scaleMovementFactor = 1f; //translation between scaling to movement in z axis
+		private final static float scaleMovementFactor = 3f; //translation between scaling to movement in z axis
 
 		//The following are not final because they depend on screen dpi.
-		private float translateGestureFactor = 0.1f; //translation between translate gesture to rotating
-		private float translateMultiGestureFactor = 0.002f; //translation between translate gesture to rotating
+		private float translateGestureFactor = 0.08f; //translation between translate gesture to rotating
+		private float translateMultiGestureFactor = 0.1f; //translation between translate gesture to rotating
 
 		private GestureDetectorCompat translateGestureDetector;
 		private GestureDetectorCompat translateMultiGestureDetector;
@@ -226,26 +231,23 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		private void onGestureZoom(float focusX, float focusY, float factor) {
 			//Move on z axis of the camera.
 			float movement = -(scaleMovementFactor * (1 - factor));
-			pcdController.translateCameraOnAxes(0, 0, movement);
+//			pcdController.translateCameraOnAxes(0, 0, movement);
 		}
 
 		private void onMultiGestureTranslate(float x, float y) {
 			x *= translateMultiGestureFactor;
 			y *= -translateMultiGestureFactor; //opengl is bottom-up axis, and screen is top-down axis
 
-			pcdController.translateCameraOnAxes(x, y, 0);
+			//x movement is rotation on y axis, and vice versa.
+			pcdController.rotatePcdInPlaceOnCameraAxisX(y);
+			pcdController.rotatePcdInPlaceOnCameraAxisY(x);
 		}
 
 		private void onGestureTranslate(float x, float y) {
 			x *= translateGestureFactor;
 			y *= translateGestureFactor;
 
-			//x movement is rotation on y axis, and vice versa
-//			cameraController.rotateOnCameraX(y);
-//			cameraController.rotateOnCameraY(x);
-
-//			pcdController.rotateOnCameraX(y);
-			pcdController.rotatePcdInPlaceOnCameraAxisX(y, cameraModel);
+			pcdController.rotateOnCameraX(y);
 			pcdController.rotateOnCameraY(x);
 		}
 
@@ -260,6 +262,9 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 	 * A class used to control movements of a pointcloud layer, such as camera and pcd translations.
 	 */
 	public class PointCloudController {
+		private static final int X_AXIS = 0x00;
+		private static final int Y_AXIS = 0x01;
+		private static final int Z_AXIS = 0x02;
 		Vector3 origin;
 		float maxSpeed;
 		Vector3 cameraSpeed;
@@ -269,14 +274,14 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		 */
 		public PointCloudController(float maxSpeed) {
 			this.maxSpeed = maxSpeed;
-			origin = new Vector3(0,0,0);
-			cameraSpeed = new Vector3(0,0,0);
+			origin = new Vector3(0, 0, 0);
+			cameraSpeed = new Vector3(0, 0, 0);
 
 			//add speed factor on each drawing of frame.
 			addDrawListener(new PcdDrawListener() {
 				@Override
 				public void onPcdDraw() {
-					cameraModel.translate(cameraSpeed);
+					cameraMatrix.translate(cameraSpeed);
 				}
 			});
 		}
@@ -284,22 +289,25 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		/**
 		 * Sets the origin for the world.
 		 */
-		public void setOrigin(float x,float y,float z){
-			setOrigin(new Vector3(x,y,z));
+		public void setOrigin(float x, float y, float z) {
+			setOrigin(new Vector3(x, y, z));
 		}
 
 		/**
 		 * Sets the origin for the world.
 		 */
-		public void setOrigin(Vector3 origin){
-			this.origin=origin;
+		public void setOrigin(Vector3 origin) {
+			//cancel the translation of current origin, and move to the new origin.
+			pcdMatrix.translate(this.origin);
+			this.origin = origin;
+			pcdMatrix.translate(this.origin.scale(-1f));
 		}
 
 		/**
 		 * Moves the camera on it's axes.
 		 */
 		public void translateCameraOnAxes(Vector3 delta) {
-			cameraModel.translate(delta);
+			cameraMatrix.translate(delta);
 		}
 
 		/**
@@ -320,9 +328,9 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		 * Moves the camera on it's axes on each frame, by fraction of maximum speed.
 		 */
 		public void setCameraSpeed(Vector3 steps) {
-			float dx = (float)steps.getX() * maxSpeed;
-			float dy = (float)steps.getY() * maxSpeed;
-			float dz = (float)steps.getZ() * maxSpeed;
+			float dx = (float) steps.getX() * maxSpeed;
+			float dy = (float) steps.getY() * maxSpeed;
+			float dz = (float) steps.getZ() * maxSpeed;
 
 			//x axis is inverted.
 			//TODO: CHECK WHY IS IT SO.
@@ -332,43 +340,100 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 		/**
 		 * Rotates the camera on its x axis.
+		 *
 		 * @param delta: the angle in degrees.
 		 */
 		public void rotateOnCameraX(float delta) {
-			cameraModel.rotateX(delta);
+			cameraMatrix.rotateX(delta);
 		}
 
 		/**
 		 * Rotates the camera on its y axis.
+		 *
 		 * @param delta: the angle in degrees.
 		 */
 		public void rotateOnCameraY(float delta) {
-			cameraModel.rotateY(delta);
+			cameraMatrix.rotateY(delta);
 		}
 
 		/**
 		 * Rotates the camera on its z axis.
+		 *
 		 * @param delta: the angle in degrees.
 		 */
 		public void rotateOnCameraZ(float delta) {
-			cameraModel.rotateZ(delta);
+			cameraMatrix.rotateZ(delta);
 		}
 
 		/**
-		 * Rotates The Pcd on the camera's
+		 * Rotates The Pcd on the camera's x axis, in place.
+		 *
 		 * @param delta: Angle in degrees
-		 * @param model: The model to rotate around.
 		 */
-		public void rotatePcdInPlaceOnCameraAxisX(float delta, ModelMatrix model){
-			model.rotateOnModelX(delta, model);
+		public void rotatePcdInPlaceOnCameraAxisX(float delta) {
+			rotatePcdInPlaceOnCameraAxis(delta, X_AXIS);
 		}
+
+		/**
+		 * Rotates The Pcd on the camera's y axis, in place.
+		 *
+		 * @param delta: Angle in degrees
+		 */
+		public void rotatePcdInPlaceOnCameraAxisY(float delta) {
+			rotatePcdInPlaceOnCameraAxis(delta, Y_AXIS);
+		}
+
+		/**
+		 * Rotates The Pcd on the camera's y axis, in place.
+		 *
+		 * @param delta: Angle in degrees
+		 */
+		public void rotatePcdInPlaceOnCameraAxisZ(float delta) {
+			rotatePcdInPlaceOnCameraAxis(delta, Z_AXIS);
+		}
+
+		/**
+		 * Rotates The Pcd on the camera's axis, in place.
+		 *
+		 * @param delta: Angle in degrees
+		 * @param AXIS   : The axis's code (X_AXIS, Y_AXIS or Z_AXIS).
+		 */
+		private void rotatePcdInPlaceOnCameraAxis(float delta, int AXIS) {
+			//calculate the axis of the camera, in pcd's frame.
+			ModelMatrix m_eye_pcd = eyeMatrix.mult(pcdMatrix); //represents: pcd_frame  -->  eye_frame
+			ModelMatrix m_eye_pcd_inverted = m_eye_pcd.getInvertedMat(); // represents:  eye_frame  -->  pcd_frame
+
+			Vector3 camera_x_in_pcd_frame = m_eye_pcd_inverted.mult(new Vector3(1, 0, 0));
+			Vector3 camera_y_in_pcd_frame = m_eye_pcd_inverted.mult(new Vector3(0, 1, 0));
+			Vector3 camera_z_in_pcd_frame = m_eye_pcd_inverted.mult(new Vector3(0, 0, 1));
+
+			Vector3 camera_0_in_pcd_frame = m_eye_pcd_inverted.mult(new Vector3(0, 0, 0));
+
+			Vector3 camera_xAxis_in_pcd_frame = camera_x_in_pcd_frame.subtract(camera_0_in_pcd_frame);
+			Vector3 camera_yAxis_in_pcd_frame = camera_y_in_pcd_frame.subtract(camera_0_in_pcd_frame);
+			Vector3 camera_zAxis_in_pcd_frame = camera_z_in_pcd_frame.subtract(camera_0_in_pcd_frame);
+
+			switch (AXIS) {
+				case X_AXIS:
+					pcdMatrix.rotate(delta, camera_xAxis_in_pcd_frame);
+					break;
+				case Y_AXIS:
+					pcdMatrix.rotate(delta, camera_yAxis_in_pcd_frame);
+					break;
+				case Z_AXIS:
+					pcdMatrix.rotate(delta, camera_zAxis_in_pcd_frame);
+					break;
+			}
+
+		}
+
 		/**
 		 * Moves the camera and PCD to the origin.
 		 */
 		public void resetView() {
-			cameraModel.setIdentity();
-			pcdModel.setIdentity();
-			pcdModel.translate(origin);
+			cameraMatrix.setIdentity();
+			pcdMatrix.setIdentity();
+			pcdMatrix.translate(origin.scale(-1));
 		}
 	}
 
@@ -383,11 +448,11 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 		drawListeners = new ArrayList<PcdDrawListener>();
 
-		cameraModel = new ModelMatrix();
-//		cameraModel.rotateZ(90);
-		cameraModel.translate(0,0,-10);
+		eyeMatrix = new ModelMatrix();
+		cameraMatrix = new ModelMatrix();
+		cameraMatrix.translate(0, 0, -10);
 
-		pcdModel = new ModelMatrix();
+		pcdMatrix = new ModelMatrix();
 		pcdController = new PointCloudController(MAX_SPEED_PER_FRAME);
 
 		pointCloudCenterOfGravity = new Vector3(0, 0, 0);
@@ -426,78 +491,45 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		return drawListeners.contains(listener) && drawListeners.remove(listener);
 	}
 
-	int counter =0;
 	@Override
 	public void draw(VisualizationView view, GL10 gl) {
 
 		if (null != vertexFrontBuffer) {
 			synchronized (mutex) {
 				notifyDrawListeners();
+				setCamera(gl);
 
-				counter++;
-				ModelMatrix cam = new ModelMatrix( setCamera(gl) );
-				ModelMatrix inv_cam = cam.getInvertedMat();
-
-				ModelMatrix rot = new ModelMatrix();
-//				rot.rotate(2 * counter, 1, 0, 0);
-
-				ModelMatrix mv = cam.mult(pcdModel);
-				ModelMatrix inv_mv = mv.getInvertedMat();
-
-				ModelMatrix translate_in_cam = mv.calTranslation();
-
-				ModelMatrix trt =
-						   translate_in_cam.getInvertedMat()
-				    .mult(rot)
-					.mult(translate_in_cam)
-				;
-
-				ModelMatrix trt_pcd = inv_mv.mult(trt).mult(mv);
-
-				ModelMatrix pcdModel_updated =
-						   cam
-					.mult(pcdModel)
-					.mult( trt_pcd )
-
-				;
-
-				//draw the pcd.
-				Vertices.drawPointsWithColors(gl, vertexFrontBuffer, colorsFrontBuffer, POINT_SIZE, pcdModel_updated.getMat() );
+				Vertices.drawPointsWithColors(gl, vertexFrontBuffer, colorsFrontBuffer, POINT_SIZE, pcdMatrix.getMat());
 			}
 		}
 	}
 
 	private void notifyDrawListeners() {
-		if(drawListeners == null) return;
+		if (drawListeners == null) return;
 
-		for(PcdDrawListener listener: drawListeners){
+		for (PcdDrawListener listener : drawListeners) {
 			listener.onPcdDraw();
 		}
 	}
 
 	/**
 	 * Sets the camera: moves according to the camera position, and set the lookAt point according to it's Z axis.
+	 * Also, Pushes the eye matrix to the current GL_MODELVIEW.
 	 */
-	private float[] setCamera(GL10 gl) {
+	private void setCamera(GL10 gl) {
 		gl.glMatrixMode(GL10.GL_MODELVIEW);     //Select The Modelview Matrix
 		gl.glLoadIdentity();
-		Vector3 lookAtPoint = cameraModel.getAxisZNormalized();/*Z axis of the "lookAt" is the place we should look*/
+		Vector3 lookAtPoint = cameraMatrix.getAxisZNormalized();/*Z axis of the "lookAt" is the place we should look*/
+
 		//add the movement of the camera, to get relative point and not absolute.
-		lookAtPoint = lookAtPoint.add(cameraModel.getPosition());
-//		GLU.gluLookAt(gl, cameraModel.getX(), cameraModel.getY(), cameraModel.getZ(), /* look from camera XYZ */
-//				(float) lookAtPoint.getX(), (float) lookAtPoint.getY(), (float) lookAtPoint.getZ(),
-//				(float) cameraModel.getAxisYNormalized().getX(), (float) cameraModel.getAxisYNormalized().getY(), (float) cameraModel.getAxisYNormalized().getZ()); /* positive Y up vector */
+		lookAtPoint = lookAtPoint.add(cameraMatrix.getPosition());
 
 		float[] scratch = new float[16];
-			Matrix.setLookAtM(scratch, 0, cameraModel.getX(), cameraModel.getY(), cameraModel.getZ(), /* look from camera XYZ */
-					(float) lookAtPoint.getX(), (float) lookAtPoint.getY(), (float) lookAtPoint.getZ(),
-					(float) cameraModel.getAxisYNormalized().getX(), (float) cameraModel.getAxisYNormalized().getY(), (float) cameraModel.getAxisYNormalized().getZ());
-		return scratch;
-
-//		GLU.gluLookAt(gl, 0, 0, 10, /* look from camera XYZ */
-//				(float) 0, 0, 0,
-//				(float) -1, (float) 0, (float) 0); /* positive Y up vector */
-
+		Matrix.setLookAtM(scratch, 0, cameraMatrix.getX(), cameraMatrix.getY(), cameraMatrix.getZ(), /* look from camera XYZ */
+				(float) lookAtPoint.getX(), (float) lookAtPoint.getY(), (float) lookAtPoint.getZ(),
+				(float) cameraMatrix.getAxisYNormalized().getX(), (float) cameraMatrix.getAxisYNormalized().getY(), (float) cameraMatrix.getAxisYNormalized().getZ());
+		eyeMatrix = new ModelMatrix(scratch);
+		gl.glMultMatrixf(eyeMatrix.getMat(), 0);
 	}
 
 	@Override
@@ -515,7 +547,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 				//Keep the PCD's frame for any case.
 				frame = GraphName.of(pointCloud.getHeader().getFrameId());
 				updateVertexBuffer(pointCloud);
-				pcdController.setOrigin(pointCloudCenterOfGravity);
 			}
 		});
 
@@ -526,8 +557,7 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 
 	private void updateVertexBuffer(final PointCloud2 pointCloud) {
-		// We expect an unordered, XYZ point cloud of 32-bit floats (i.e. the result of
-		// pcl::toROSMsg()).
+		// We expect an unordered, XYZ point cloud of 32-bit floats (i.e. the result of pcl::toROSMsg()).
 		Preconditions.checkArgument(pointCloud.getHeight() == 1);
 		Preconditions.checkArgument(pointCloud.getFields().get(0).getDatatype() == PointField.FLOAT32);
 		Preconditions.checkArgument(pointCloud.getFields().get(1).getDatatype() == PointField.FLOAT32);
@@ -563,7 +593,7 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			vertexBackBuffer.put(z);
 
 			//add the relative part of this point to the center of gravity
-			centerOfGravity = centerOfGravity.add(new Vector3(x/numOfPoints, y/numOfPoints, z/numOfPoints));
+			centerOfGravity = centerOfGravity.add(new Vector3(x / numOfPoints, y / numOfPoints, z / numOfPoints));
 
 
 			//discard index
@@ -582,14 +612,17 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			int totalRead = buffer.readerIndex() - pointBegin;
 			buffer.readBytes(pointCloud.getPointStep() - totalRead);
 		}
-		long endTime   = System.currentTimeMillis();
+		long endTime = System.currentTimeMillis();
 		long totalTime = endTime - startTime;
 		Log.i("Cogni", "Time PointCloud processing took: " + totalTime + "ms");
 
 		vertexBackBuffer.position(0);
 		colorsBackBuffer.position(0);
 
+
 		this.pointCloudCenterOfGravity = centerOfGravity;
+		pcdController.setOrigin(pointCloudCenterOfGravity);
+
 
 		synchronized (mutex) {
 			FloatBuffer tmpVertice = vertexFrontBuffer;

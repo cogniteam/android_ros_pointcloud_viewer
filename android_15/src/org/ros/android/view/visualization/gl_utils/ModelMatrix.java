@@ -1,6 +1,7 @@
 package org.ros.android.view.visualization.gl_utils;
 
 import android.opengl.Matrix;
+
 import org.ros.rosjava_geometry.Vector3;
 
 /**
@@ -12,19 +13,20 @@ public class ModelMatrix {
 	public ModelMatrix() {
 		Matrix.setIdentityM(mModel, 0);
 	}
+
 	public ModelMatrix(float m[]) {
 		mModel = m;
 	}
 
-	public ModelMatrix clone(){
+	public ModelMatrix clone() {
 		ModelMatrix answer = new ModelMatrix();
-		for(int i=0; i<mModel.length; i++){
+		for (int i = 0; i < mModel.length; i++) {
 			answer.mModel[i] = this.mModel[i];
 		}
 		return answer;
 	}
 
-	public ModelMatrix calTranslation(){
+	public ModelMatrix calTranslation() {
 		ModelMatrix m = new ModelMatrix();
 		m.translate(getX(), getY(), getZ());
 		return m;
@@ -53,9 +55,15 @@ public class ModelMatrix {
 		Matrix.rotateM(this.mModel, 0, angle, 0, 0, 1.0f);
 	}
 
+
 	//angle in degrees
 	public void rotate(float angle, float x, float y, float z) {
 		Matrix.rotateM(this.mModel, 0, angle, x, y, z);
+	}
+
+	//angle in degrees
+	public void rotate(float angle, Vector3 v) {
+		Matrix.rotateM(this.mModel, 0, angle, (float)v.getX(), (float)v.getY(), (float)v.getZ());
 	}
 
 	//Scales the object
@@ -136,26 +144,6 @@ public class ModelMatrix {
 		return (new Vector3(mModel[8], mModel[9], mModel[10])).scale(1.f / getScaling());
 	}
 
-	/**
-	 * Rotates around another's model axis.
-	 * @param delta: Angle in degrees
-	 * @param model: The model to rotate around.
-	 */
-	public void rotateOnModelX(float delta, ModelMatrix camera) {
-		ModelMatrix translation = new ModelMatrix();
-		translation.translate(this.getPosition());
-		ModelMatrix invertedTranslation = translation.getInvertedMat();
-
-		ModelMatrix appliedRotation = new ModelMatrix();
-		appliedRotation.rotateX(delta);
-
-		float answer[] = new float[16];
-		Matrix.multiplyMM(answer, 0 , invertedTranslation.getMat(), 0 , this.mModel, 0);
-		Matrix.multiplyMM(answer, 0 , appliedRotation.getMat(), 0 , answer, 0);
-		Matrix.multiplyMM(answer, 0 , translation.getMat(), 0 , answer, 0);
-
-		this.mModel = answer;
-	}
 	public float getScaling() {
 		return (float) Math.sqrt(Math.pow(mModel[0], 2) + Math.pow(mModel[4], 2) + Math.pow(mModel[8], 2));
 	}
@@ -164,9 +152,9 @@ public class ModelMatrix {
 		return mModel;
 	}
 
-	public ModelMatrix getInvertedMat(){
+	public ModelMatrix getInvertedMat() {
 		ModelMatrix answer = new ModelMatrix();
-		Matrix.invertM(answer.mModel, 0 , this.mModel, 0);
+		Matrix.invertM(answer.mModel, 0, this.mModel, 0);
 		return answer;
 	}
 
@@ -178,10 +166,30 @@ public class ModelMatrix {
 	}
 
 
-	public ModelMatrix mult(ModelMatrix m){
+	/**
+	 * Multiplies by matrix m and returns the result, as followed:
+	 * result = this.matrix * m
+	 */
+	public ModelMatrix mult(ModelMatrix m) {
 		float a[] = new float[16];
-		Matrix.multiplyMM(a, 0, mModel,0, m.mModel,0);
+		Matrix.multiplyMM(a, 0, mModel, 0, m.mModel, 0);
 		return new ModelMatrix(a);
+	}
+
+	/**
+	 * Multiplies by vector v and returns the result, as followed:
+	 * result = this.matrix * v
+	 */
+	public Vector3 mult(Vector3 v) {
+		//build an opnegl vector from the given vector.
+		float a[] = new float[4];
+		float b[] = new float[4];
+		a[0] = (float) v.getX();
+		a[1] = (float) v.getY();
+		a[2] = (float) v.getZ();
+		a[3] = 1f; //4th value should always be 1 in our case.
+		Matrix.multiplyMV(b, 0, mModel, 0, a, 0);
+		return new Vector3(b[0], b[1], b[2]);
 	}
 
 }
