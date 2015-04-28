@@ -48,15 +48,15 @@ public class PointCloudView extends RelativeLayout {
 	 * Initiates all components.
 	 * To be called from the onCreate method of the parent.
 	 */
-	public void onCreate(Context context, String topic, String frame) {
-		onCreate(context, GraphName.of(topic), GraphName.of(frame));
+	public void onCreate(Context context, String topic) {
+		onCreate(context, GraphName.of(topic));
 	}
 
 	/**
 	 * Initiates all components.
 	 * To be called from the onCreate method of the parent.
 	 */
-	public void onCreate(Context context, GraphName topic, GraphName frame) {
+	public void onCreate(Context context, GraphName topic) {
 		LayoutInflater.from(context).inflate(R.layout.point_cloud_view, this, true);
 
 		splashView = findViewById(R.id.splash_view);
@@ -69,8 +69,8 @@ public class PointCloudView extends RelativeLayout {
 		});
 
 		visualizationView = (VisualizationView) findViewById(R.id.pcd_visualization_view);
-		visualizationView.getCamera().setFrame(frame);
-		cogniPointCloud2DLayer = new CogniPointCloud2DLayer(context, topic, frame);
+		visualizationView.getCamera().setFrame(GraphName.empty());
+		cogniPointCloud2DLayer = new CogniPointCloud2DLayer(context, topic);
 		visualizationView.onCreate(Lists.<Layer>newArrayList(
 				cogniPointCloud2DLayer));
 

@@ -69,7 +69,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 	//keep a mutex for reading/writing to buffers.
 	private final Object mutex;
 
-	private GraphName frameToStick;
 	private FloatBuffer vertexFrontBuffer;
 	private FloatBuffer colorsFrontBuffer;
 	private FloatBuffer vertexBackBuffer;
@@ -437,13 +436,12 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 		}
 	}
 
-	public CogniPointCloud2DLayer(Context context, String topicName, String frameToStick) {
-		this(context, GraphName.of(topicName), GraphName.of(frameToStick));
+	public CogniPointCloud2DLayer(Context context, String topicName) {
+		this(context, GraphName.of(topicName));
 	}
 
-	public CogniPointCloud2DLayer(Context context, GraphName topicName, GraphName frameToStick) {
+	public CogniPointCloud2DLayer(Context context, GraphName topicName) {
 		super(topicName, PointCloud2._TYPE);
-		this.frameToStick = frameToStick;
 		mutex = new Object();
 
 		drawListeners = new ArrayList<PcdDrawListener>();
@@ -644,6 +642,6 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 
 	@Override
 	public GraphName getFrame() {
-		return frameToStick;
+		return GraphName.empty();
 	}
 }
