@@ -4,19 +4,6 @@
     android:layout_height="match_parent"
     android:orientation="horizontal">
 
-    <!--<org.ros.android.view.visualization.VisualizationView
-        android:id="@+id/map_visualization"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"/>
-
-    &lt;!&ndash; Separator &ndash;&gt;
-    <View
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:background="@android:color/darker_gray"/>
--->
-
     <org.ros.android.view.visualization.PointCloudView
         android:id="@+id/pcd_visualization"
         android:layout_width="match_parent"

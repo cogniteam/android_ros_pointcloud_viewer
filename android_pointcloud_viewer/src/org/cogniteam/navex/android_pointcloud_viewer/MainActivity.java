@@ -43,31 +43,6 @@ public class MainActivity extends RosActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.settings_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-    /*switch (item.getItemId()) {
-      case R.id.virtual_joystick_snap:
-        if (!item.isChecked()) {
-          item.setChecked(true);
-          virtualJoystickView.EnableSnapping();
-        } else {
-          item.setChecked(false);
-          virtualJoystickView.DisableSnapping();
-        }
-        return true;
-      default:
-        return super.onOptionsItemSelected(item);
-    }*/
-        return true;
-    }
-
-    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
