@@ -25,7 +25,7 @@ android {
 
   defaultConfig {
     minSdkVersion 15
-    applicationId "org.cogniteam.org.cogniteam.navex.android_navex"
+    applicationId "org.cogniteam.org.cogniteam.pointcloud_viewer"
     targetSdkVersion 15
     versionCode 1
     versionName "1.0"

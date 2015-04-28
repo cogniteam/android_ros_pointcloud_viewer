@@ -40,6 +40,8 @@ public class PointCloudView extends RelativeLayout {
 
 	public PointCloudView(Context context, AttributeSet attrs) {
 		super(context, attrs);
+		setGesturesControl(true);
+		setButtonsControl(true);
 	}
 
 	/**

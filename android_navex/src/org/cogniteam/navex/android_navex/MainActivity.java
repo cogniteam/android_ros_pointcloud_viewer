@@ -60,19 +60,6 @@ public class MainActivity extends RosActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-    /*switch (item.getItemId()) {
-      case R.id.virtual_joystick_snap:
-        if (!item.isChecked()) {
-          item.setChecked(true);
-          virtualJoystickView.EnableSnapping();
-        } else {
-          item.setChecked(false);
-          virtualJoystickView.DisableSnapping();
-        }
-        return true;
-      default:
-        return super.onOptionsItemSelected(item);
-    }*/
         return true;
     }
 

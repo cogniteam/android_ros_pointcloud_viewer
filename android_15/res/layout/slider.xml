@@ -11,18 +11,8 @@
         android:scaleType="fitXY"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
-        android:background="@drawable/seekbar_background"
+        android:background="@drawable/rounded_rectangle_background"
         />
-
-    <!--<ImageView
-        android:layout_width="40dp"
-        android:layout_height="wrap_content"
-        android:id="@+id/slider_boarder"
-        android:src="@drawable/zoom_bg"
-        android:scaleType="fitXY"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        />-->
 
     <ImageView
         android:layout_width="wrap_content"

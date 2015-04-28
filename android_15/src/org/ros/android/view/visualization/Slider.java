@@ -19,12 +19,12 @@ import java.util.ArrayList;
  * A simple, visual slider
  */
 public class Slider extends RelativeLayout {
-
-
 	ImageView sliderThumb;
 	View sliderBoarder;
 
 	ArrayList<SliderListener> listeners;
+
+	private final static float BOARDER_UNPRESSED_ALPHA = 0.1f; //normal alpha of the boarder, when not pressing the slider.
 
 	public interface SliderListener {
 		/**
@@ -102,6 +102,8 @@ public class Slider extends RelativeLayout {
 			}
 		});
 
+		sliderBoarder.setAlpha(BOARDER_UNPRESSED_ALPHA);
+
 		sliderThumb.setOnTouchListener(new OnTouchListener() {
 			@Override
 			public boolean onTouch(View v, MotionEvent event) {
@@ -114,6 +116,7 @@ public class Slider extends RelativeLayout {
 
 				switch (action) {
 					case MotionEvent.ACTION_DOWN:
+						sliderBoarder.setAlpha(1f);
 					case MotionEvent.ACTION_MOVE:
 						float yPos = sliderThumb.getY() + event.getY() - HALF_HEIGHT;
 						yPos = Math.max(Math.min(yPos, BOARDER_BOTTOM), BOARDER_TOP);
@@ -126,8 +129,8 @@ public class Slider extends RelativeLayout {
 					case MotionEvent.ACTION_UP:
 						sliderThumb.setY(BOARDER_CENTER);
 						notifyListeners(0);
-						break;
 					case MotionEvent.ACTION_CANCEL:
+						sliderBoarder.setAlpha(BOARDER_UNPRESSED_ALPHA);
 						break;
 					default:
 						break;

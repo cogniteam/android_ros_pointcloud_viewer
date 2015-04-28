@@ -18,13 +18,15 @@ import java.util.ArrayList;
  * A simple joystick with visualization.
  */
 public class SimpleJoystick extends RelativeLayout {
-	private ImageView boarder;
+	private View boarder;
 	private ImageView thumb;
 
-	private int boarderCenterX;
 	private int boarderCenterY;
+	private int boarderCenterX;
 
 	private ArrayList<SimpleJoystickListener> listeners;
+
+	private final static float BOARDER_UNPRESSED_ALPHA = 0.1f; //normal alpha of the boarder, when not pressing the slider.
 
 	public interface SimpleJoystickListener {
 		/**
@@ -88,11 +90,8 @@ public class SimpleJoystick extends RelativeLayout {
 		listeners = new ArrayList<SimpleJoystickListener>();
 
 		thumb = (ImageView) findViewById(R.id.joystick_pan);
-		boarder = (ImageView) findViewById(R.id.joystick_boarder);
+		boarder = (View) findViewById(R.id.joystick_boarder);
 
-
-		thumb = (ImageView) findViewById(R.id.joystick_pan);
-		boarder = (ImageView) findViewById(R.id.joystick_boarder);
 		//use a listener to always hold the latest size of the boarder.
 		boarder.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
 			@SuppressWarnings("deprecation")
@@ -100,15 +99,21 @@ public class SimpleJoystick extends RelativeLayout {
 			public void onGlobalLayout() {
 				//now we can retrieve the width and height
 				int height = boarder.getHeight();
-				int width = height;
+				int width = height; //we wish to make the background rounded
+				//set the layout's left padding to fit the boarder's height/width, since the joystick sticks to the right.
+				int leftPadding = SimpleJoystick.this.getWidth() - width;
+				SimpleJoystick.this.setPadding(leftPadding, 0, 0, 0);
+
 				boarderCenterX = Math.round(boarder.getX() + boarder.getWidth() - width / 2);
 				boarderCenterY = Math.round(boarder.getY() + boarder.getHeight() - height / 2);
-
+				
 				//center the position according to the boarder
 				thumb.setX(boarderCenterX - thumb.getWidth() / 2);
 				thumb.setY(boarderCenterY - thumb.getHeight() / 2);
 			}
 		});
+
+		boarder.setAlpha(BOARDER_UNPRESSED_ALPHA);
 
 		thumb.setOnTouchListener(new OnTouchListener() {
 			@Override
@@ -116,6 +121,7 @@ public class SimpleJoystick extends RelativeLayout {
 				int action = event.getAction();
 				switch (action) {
 					case MotionEvent.ACTION_DOWN:
+						boarder.setAlpha(1f);
 					case MotionEvent.ACTION_MOVE:
 						//move the joystick to the correct spot.
 						//basically, the size of the boarder can change - that's why we're not using "final"
@@ -151,8 +157,8 @@ public class SimpleJoystick extends RelativeLayout {
 						thumb.setX(boarderCenterX - thumb.getWidth() / 2);
 						thumb.setY(boarderCenterY - thumb.getHeight() / 2);
 						notifyListeners(0, 0);
-						break;
 					case MotionEvent.ACTION_CANCEL:
+						boarder.setAlpha(BOARDER_UNPRESSED_ALPHA);
 						break;
 					default:
 						break;
