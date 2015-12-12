@@ -49,7 +49,7 @@ public class MainActivity extends RosActivity {
 
         pcdVisualizationView = (PointCloudView) findViewById(R.id.pcd_visualization);
 		pcdVisualizationView.setControlMode(PointCloudView.BUTTONS_AND_GESTURES);
-		pcdVisualizationView.onCreate(MainActivity.this, "/cloud/source");
+		pcdVisualizationView.onCreate(MainActivity.this, "/cloud_map");
     }
 
     @Override

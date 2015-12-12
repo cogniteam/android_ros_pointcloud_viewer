@@ -573,6 +573,14 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			colorsBackBuffer = Vertices.allocateBuffer(colorSize);
 		}
 
+		/**
+		 * add rgbmode support
+		 * @author lianera
+		 * @mail lianera@lianera.com
+		*/
+		boolean rgbmode = pointCloud.getFields().get(3).getName().equals("rgb");
+		Log.v("MODE:", rgbmode?"RGB mode":"Intensity mode");
+
 		Vector3 centerOfGravity = new Vector3(0, 0, 0);
 		final ChannelBuffer buffer = pointCloud.getData();
 		long startTime = System.currentTimeMillis();
@@ -597,14 +605,31 @@ public class CogniPointCloud2DLayer extends SubscriberLayer<PointCloud2> impleme
 			//discard index
 			buffer.readFloat();
 
-			// intensities
-			float intensity = buffer.readFloat();
-			intensity = (intensity - MIN_INTENSITY) / (MAX_INTENSITY - MIN_INTENSITY);
-			intensity = Math.min(Math.max(intensity, 0f), 1f);
-			colorsBackBuffer.put(intensity); //r
-			colorsBackBuffer.put(intensity); //g
-			colorsBackBuffer.put(intensity); //b
-			colorsBackBuffer.put(1f); //a
+			if(rgbmode){
+				// rgb
+				int b8s = (int)buffer.readByte() & 0xFF;	// 8 significance bit
+				int g8s = (int)buffer.readByte() & 0xFF;
+				int r8s = (int)buffer.readByte() & 0xFF;
+
+				float r = (float)r8s / 255.0f;
+				float g = (float)g8s / 255.0f;
+				float b = (float)b8s / 255.0f;
+
+				colorsBackBuffer.put(r); //r
+				colorsBackBuffer.put(g); //g
+				colorsBackBuffer.put(b); //b
+				colorsBackBuffer.put(1.0f); //a
+
+			}else {
+				// intensities
+				float intensity = buffer.readFloat();
+				intensity = (intensity - MIN_INTENSITY) / (MAX_INTENSITY - MIN_INTENSITY);
+				intensity = Math.min(Math.max(intensity, 0f), 1f);
+				colorsBackBuffer.put(intensity); //r
+				colorsBackBuffer.put(intensity); //g
+				colorsBackBuffer.put(intensity); //b
+				colorsBackBuffer.put(1f); //a
+			}
 
 			//discard leftovers
 			int totalRead = buffer.readerIndex() - pointBegin;
