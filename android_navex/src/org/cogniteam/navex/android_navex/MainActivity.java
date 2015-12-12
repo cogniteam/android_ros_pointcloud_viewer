@@ -76,7 +76,7 @@ public class MainActivity extends RosActivity {
                 new RobotLayer("/slam_out_pose")));
 
         pcdVisualizationView = (PointCloudView) findViewById(R.id.pcd_visualization);
-		pcdVisualizationView.onCreate(MainActivity.this, "/cloud/source", "map");
+		pcdVisualizationView.onCreate(MainActivity.this, "/cloud_map");
     }
 
     @Override
